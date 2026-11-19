@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>zanzara·translate</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at 30% 20%, #f5f7fa, #e2e8f0);
+      min-height: 100vh;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* card minimalissima */
+    .card {
+      max-width: 880px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(0,0,0,0.02);
+      border: 0.5px solid rgba(255,255,255,0.6);
+      padding: 1.8rem;
+      transition: all 0.2s ease;
+    }
+
+    /* layout due pannelli + swap */
+    .translator-panels {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .panel {
+      flex: 1;
+    }
+    .swap-btn {
+      background: rgba(0,0,0,0.05);
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 44px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      color: #2c5a7a;
+    }
+    .swap-btn:active {
+      transform: scale(0.92);
+      background: rgba(0,122,255,0.2);
+    }
+    textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 1.2rem;
+      padding: 0.9rem 1rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      color: #1c2e3f;
+      font-weight: 450;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.02);
+      transition: all 0.2s;
+    }
+    textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.2);
+      background: white;
+    }
+
+    /* dialetti come pillole minimal */
+    .dialects {
+      display: flex;
+      gap: 0.4rem;
+      justify-content: center;
+      margin: 1rem 0 0.8rem;
+    }
+    .dialect {
+      font-size: 0.75rem;
+      padding: 0.3rem 0.9rem;
+      border-radius: 40px;
+      background: rgba(0,0,0,0.04);
+      color: #3a4a5a;
+      font-weight: 490;
+      cursor: pointer;
+      transition: 0.2s;
+      letter-spacing: -0.2px;
+    }
+    .dialect.active {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      color: #007aff;
+      font-weight: 510;
+    }
+
+    button {
+      background: #007aff;
+      border: none;
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 2rem;
+      font-size: 0.9rem;
+      font-weight: 590;
+      color: white;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.2s;
+      margin: 0.4rem 0 0.6rem;
+    }
+    button:active { transform: scale(0.97); }
+
+    canvas {
+      width: 100%;
+      height: 70px;
+      display: block;
+      background: rgba(0,0,0,0.02);
+      border-radius: 1rem;
+      margin: 0.2rem 0;
+    }
+
+    .output-bar {
+      background: rgba(0,0,0,0.02);
+      border-radius: 1rem;
+      padding: 0.8rem;
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .translated {
+      font-size: 0.95rem;
+      font-family: 'SF Mono', monospace;
+      color: #1e2f3c;
+      font-weight: 450;
+      word-break: break-word;
+      flex: 1;
+    }
+    .play, .meeting-btn {
+      background: rgba(0,0,0,0.05);
+      padding: 0.3rem 0.8rem;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      color: #2c5a7a;
+      width: auto;
+      margin: 0;
+      font-weight: 500;
+    }
+    .meeting-btn {
+      background: rgba(0,122,255,0.1);
+      color: #007aff;
+    }
+    .play:active, .meeting-btn:active { transform: scale(0.95); }
+
+    /* zanzara volante singola */
+    .mosquito {
+      position: fixed;
+      font-size: 2rem;
+      pointer-events: none;
+      z-index: 1000;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+      will-change: left, top;
+    }
+
+    /* zanzare per la riunione */
+    .meeting-mosquito {
+      position: fixed;
+      font-size: 1.8rem;
+      pointer-events: none;
+      z-index: 1001;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      transition: transform 0.1s linear;
+      will-change: left, top;
+    }
+
+    @media (max-width: 640px) {
+      .card { padding: 1.2rem; }
+      .translator-panels { flex-direction: column; }
+      .swap-btn { transform: rotate(90deg); margin: 0.2rem 0; }
+      .dialect { font-size: 0.7rem; padding: 0.2rem 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <!-- due pannelli + swap -->
+  <div class="translator-panels">
+    <div class="panel">
+      <textarea id="sourceText" rows="2" placeholder="umano"></textarea>
+    </div>
+    <button id="swapBtn" class="swap-btn">⇄</button>
+    <div class="panel">
+      <textarea id="targetText" rows="2" placeholder="zanzara" readonly></textarea>
+    </div>
+  </div>
+  
+  <div class="dialects" id="dialectGroup">
+    <div data-dialect="tigre" class="dialect active">tigre</div>
+    <div data-dialect="comune" class="dialect">comune</div>
+    <div data-dialect="rossa" class="dialect">rossa</div>
+  </div>
+  
+  <button id="translateBtn">traduci</button>
+  
+  <canvas id="waveCanvas" width="600" height="70"></canvas>
+  
+  <div class="output-bar">
+    <div id="translatedPreview" class="translated">—</div>
+    <button id="playBtn" class="play">🎵 riproduci suoni</button>
+    <button id="meetingBtn" class="meeting-btn">🦟 convoca una riunione di zanzare</button>
+  </div>
+</div>
+
+<div id="mosquito" class="mosquito">🦟</div>
+
+<script>
+  (function() {
+    // ------------------- DIZIONARI ONOMATOPEICI ------------------
+    const sounds = {
+      tigre: ['BZZ', 'TZRR', 'KRZZ', 'ZZZ', 'BRZZ', 'ZIK', 'TGR'],
+      comune: ['zZz', 'zzzz', 'bzzz', 'ronf', 'zizz', 'mmmr'],
+      rossa: ['Rrr', 'RZZZ', 'BrrR', 'Zrrr', 'FRZZ', 'RrR']
+    };
+
+    // Mappa per sintesi audio (token -> {freq, type, duration})
+    const soundMap = {
+      // tigre
+      'BZZ': { freq: 620, type: 'sawtooth', dur: 0.25 },
+      'TZRR': { freq: 780, type: 'square', dur: 0.22 },
+      'KRZZ': { freq: 560, type: 'sawtooth', dur: 0.28 },
+      'ZZZ': { freq: 520, type: 'triangle', dur: 0.3 },
+      'BRZZ': { freq: 680, type: 'sawtooth', dur: 0.26 },
+      'ZIK': { freq: 890, type: 'square', dur: 0.18 },
+      'TGR': { freq: 490, type: 'sawtooth', dur: 0.24 },
+      // comune
+      'zZz': { freq: 410, type: 'sine', dur: 0.3 },
+      'zzzz': { freq: 380, type: 'triangle', dur: 0.35 },
+      'bzzz': { freq: 460, type: 'sawtooth', dur: 0.28 },
+      'ronf': { freq: 290, type: 'square', dur: 0.4 },
+      'zizz': { freq: 540, type: 'sine', dur: 0.25 },
+      'mmmr': { freq: 340, type: 'triangle', dur: 0.32 },
+      // rossa
+      'Rrr': { freq: 310, type: 'sawtooth', dur: 0.3 },
+      'RZZZ': { freq: 580, type: 'square', dur: 0.27 },
+      'BrrR': { freq: 430, type: 'sawtooth', dur: 0.29 },
+      'Zrrr': { freq: 370, type: 'triangle', dur: 0.33 },
+      'FRZZ': { freq: 660, type: 'sawtooth', dur: 0.24 },
+      'RrR': { freq: 510, type: 'square', dur: 0.26 }
+    };
+    const defaultSound = { freq: 450, type: 'sawtooth', dur: 0.25 };
+
+    // ------------------- TRADUZIONE UMANO -> ZANZARA ------------------
+    function humanToZanzara(text, dialect) {
+      if (!text.trim()) return "🔇 ...";
+      const words = text.split(/\s+/);
+      const pool = sounds[dialect] || sounds.tigre;
+      const translated = words.map(word => {
+        let len = Math.min(3, Math.ceil(word.length / 3) || 1);
+        let parts = [];
+        for (let i = 0; i < len; i++) {
+          parts.push(pool[Math.floor(Math.random() * pool.length)]);
+        }
+        return parts.join('-');
+      }).join(' ');
+      if (dialect === 'tigre') return `⚡ ${translated} ⚡`;
+      if (dialect === 'rossa') return `🔴 ${translated} 🔴`;
+      return `🍃 ${translated} 🍃`;
+    }
+
+    // ------------------- TRADUZIONE ZANZARA -> UMANO (base) ------------------
+    function zanzaraToHuman(zanzaraText) {
+      let clean = zanzaraText.replace(/[⚡🔴🍃]/g, '').trim();
+      if (!clean) return "🧍‍♂️ (silenzio)";
+      const tokens = clean.split(/[\s\-]+/).filter(t => t.length > 0);
+      if (tokens.length === 0) return "🧏‍♂️ umano confuso";
+      const humanPhrases = [
+        "che fame", "dammi il sangue", "buona sera", "ronzio gentile", 
+        "che caldo", "mi piaci", "zanzara felice", "notte stellata"
+      ];
+      let idx = (tokens[0].length + tokens.length) % humanPhrases.length;
+      return `🧑‍🦟 "${humanPhrases[idx]}" (messaggio zanzara)`;
+    }
+
+    // ------------------- STATO DIREZIONE ------------------
+    let direction = 'human2zanzara';
+    let currentDialect = 'tigre';
+    
+    const sourceTextarea = document.getElementById('sourceText');
+    const targetTextarea = document.getElementById('targetText');
+    const swapBtn = document.getElementById('swapBtn');
+    const translateBtn = document.getElementById('translateBtn');
+    const playBtn = document.getElementById('playBtn');
+    const previewDiv = document.getElementById('translatedPreview');
+    const dialectDivs = document.querySelectorAll('.dialect');
+
+    function updateUIByDirection() {
+      if (direction === 'human2zanzara') {
+        sourceTextarea.placeholder = "scrivi in italiano...";
+        targetTextarea.placeholder = "traduzione zanzara";
+        document.querySelector('.dialects').style.opacity = '1';
+        document.querySelector('.dialects').style.pointerEvents = 'auto';
+      } else {
+        sourceTextarea.placeholder = "scrivi in zanzarese... (es. BZZ-ronf)";
+        targetTextarea.placeholder = "traduzione umano";
+        document.querySelector('.dialects').style.opacity = '0.5';
+        document.querySelector('.dialects').style.pointerEvents = 'none';
+      }
+      performTranslation();
+    }
+
+    function performTranslation() {
+      const srcText = sourceTextarea.value;
+      let translated;
+      if (direction === 'human2zanzara') {
+        translated = humanToZanzara(srcText, currentDialect);
+        targetTextarea.value = translated;
+        previewDiv.innerText = translated;
+      } else {
+        translated = zanzaraToHuman(srcText);
+        targetTextarea.value = translated;
+        previewDiv.innerText = translated;
+      }
+      triggerCrazyWave();
+    }
+
+    function swapDirection() {
+      const src = sourceTextarea.value;
+      const tgt = targetTextarea.value;
+      sourceTextarea.value = tgt;
+      targetTextarea.value = src;
+      direction = direction === 'human2zanzara' ? 'zanzara2human' : 'human2zanzara';
+      updateUIByDirection();
+    }
+
+    // ------------------- SINTESI AUDIO SEQUENZIALE ------------------
+    let audioCtx = null;
+    let currentPlayTimeout = null;
+
+    function stopCurrentPlay() {
+      if (currentPlayTimeout) {
+        clearTimeout(currentPlayTimeout);
+        currentPlayTimeout = null;
+      }
+    }
+
+    function playSingleSound(sound, extraGap = 0) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = sound.type;
+      osc.frequency.value = sound.freq;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + sound.dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(now + sound.dur);
+    }
+
+    function playSoundSequence(sequenceText) {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      stopCurrentPlay();
+      
+      let clean = sequenceText.replace(/[⚡🔴🍃]/g, '');
+      const tokens = clean.split(/[\s\-]+/).filter(t => t.length > 0 && /[A-Za-z]/i.test(t));
+      if (tokens.length === 0) {
+        playSingleSound(defaultSound, 0);
+        return;
+      }
+      
+      let delay = 0;
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i].toUpperCase();
+        const soundDef = soundMap[token] || defaultSound;
+        let duration = soundDef.dur;
+        if (token.includes('ZZZ')) duration += 0.05;
+        setTimeout(() => {
+          playSingleSound(soundDef, i === tokens.length-1 ? 0 : 0.05);
+        }, delay * 1000);
+        delay += duration + 0.08;
+      }
+      currentPlayTimeout = setTimeout(() => { currentPlayTimeout = null; }, delay * 1000 + 200);
+    }
+    
+    function playCurrentTranslationSounds() {
+      const translationText = targetTextarea.value;
+      if (!translationText.trim() || translationText === '—') {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 300;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+        return;
+      }
+      playSoundSequence(translationText);
+    }
+    
+    // ------------------- ONDA CHE IMPAZZISCE ------------------
+    const canvas = document.getElementById('waveCanvas');
+    let ctx = canvas.getContext('2d');
+    let phase = 0, isCrazy = false, crazyTimer = null;
+    let width = canvas.clientWidth;
+    
+    function resizeCanvas() {
+      width = canvas.parentElement.clientWidth - 16;
+      canvas.width = width;
+      canvas.height = 70;
+    }
+    
+    function drawWave() {
+      if (!ctx || canvas.width === 0) return;
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = '#007aff';
+      const amp = isCrazy ? 18 + Math.random() * 28 : 14;
+      const freq = isCrazy ? 0.045 + Math.random() * 0.12 : 0.025;
+      phase += isCrazy ? 0.18 + Math.random() * 0.1 : 0.045;
+      const centerY = h / 2;
+      for (let x = 0; x <= w; x += 3) {
+        let y = centerY + amp * Math.sin(x * freq * Math.PI * 2 + phase);
+        if (isCrazy && Math.random() > 0.7) y += (Math.random() - 0.5) * 9;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      requestAnimationFrame(drawWave);
+    }
+    
+    function triggerCrazyWave() {
+      if (crazyTimer) clearTimeout(crazyTimer);
+      isCrazy = true;
+      crazyTimer = setTimeout(() => { isCrazy = false; }, 1200);
+    }
+    
+    // ------------------- GESTIONE DIALETTI ------------------
+    function setDialect(d) {
+      currentDialect = d;
+      dialectDivs.forEach(el => {
+        if (el.dataset.dialect === d) el.classList.add('active');
+        else el.classList.remove('active');
+      });
+      performTranslation();
+    }
+    
+    dialectDivs.forEach(el => {
+      el.addEventListener('click', () => setDialect(el.dataset.dialect));
+    });
+    
+    // ------------------- RIUNIONE DI ZANZARE ------------------
+    let meetingMosquitoes = [];
+    let meetingAnimationId = null;
+    
+    function summonMosquitoMeeting() {
+      // Rimuovi eventuali riunioni precedenti
+      meetingMosquitoes.forEach(m => m.element.remove());
+      if (meetingAnimationId) cancelAnimationFrame(meetingAnimationId);
+      
+      const count = 18; // numero di zanzare
+      const targetX = window.innerWidth / 2;
+      const targetY = window.innerHeight / 2;
+      const mosquitoes = [];
+      
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'meeting-mosquito';
+        el.textContent = '🦟';
+        // posizione iniziale fuori schermo
+        let side = Math.floor(Math.random() * 4); // 0: left, 1: right, 2: top, 3: bottom
+        let startX, startY;
+        const margin = 80;
+        if (side === 0) { // sinistra
+          startX = -margin;
+          startY = Math.random() * window.innerHeight;
+        } else if (side === 1) { // destra
+          startX = window.innerWidth + margin;
+          startY = Math.random() * window.innerHeight;
+        } else if (side === 2) { // sopra
+          startX = Math.random() * window.innerWidth;
+          startY = -margin;
+        } else { // sotto
+          startX = Math.random() * window.innerWidth;
+          startY = window.innerHeight + margin;
+        }
+        el.style.left = startX + 'px';
+        el.style.top = startY + 'px';
+        document.body.appendChild(el);
+        
+        // velocità iniziale diretta verso il target con variazione casuale
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const dist = Math.hypot(dx, dy);
+        const speed = 1.5 + Math.random() * 1.5; // pixel per frame (circa 60fps)
+        const vx = (dx / dist) * speed;
+        const vy = (dy / dist) * speed;
+        
+        mosquitoes.push({
+          element: el,
+          x: startX,
+          y: startY,
+          vx: vx,
+          vy: vy,
+          arrived: false
+        });
+      }
+      
+      meetingMosquitoes = mosquitoes;
+      
+      function animateMeeting() {
+        let allArrived = true;
+        for (let m of meetingMosquitoes) {
+          if (m.arrived) continue;
+          m.x += m.vx;
+          m.y += m.vy;
+          // verifica se è vicino al target
+          const dx = targetX - m.x;
+          const dy = targetY - m.y;
+          if (Math.hypot(dx, dy) < 12) {
+            m.arrived = true;
+            m.x = targetX + (Math.random() - 0.5) * 30;
+            m.y = targetY + (Math.random() - 0.5) * 30;
+          }
+          m.element.style.left = m.x + 'px';
+          m.element.style.top = m.y + 'px';
+          if (!m.arrived) allArrived = false;
+        }
+        
+        if (allArrived) {
+          // tutte arrivate: dopo 2 secondi le facciamo dissolvere
+          setTimeout(() => {
+            for (let m of meetingMosquitoes) {
+              m.element.style.transition = 'opacity 0.8s ease';
+              m.element.style.opacity = '0';
+            }
+            setTimeout(() => {
+              meetingMosquitoes.forEach(m => m.element.remove());
+              meetingMosquitoes = [];
+              if (meetingAnimationId) cancelAnimationFrame(meetingAnimationId);
+              meetingAnimationId = null;
+            }, 900);
+          }, 1800);
+          return;
+        }
+        
+        meetingAnimationId = requestAnimationFrame(animateMeeting);
+      }
+      
+      animateMeeting();
+    }
+    
+    // ------------------- EVENTI ------------------
+    translateBtn.addEventListener('click', performTranslation);
+    playBtn.addEventListener('click', playCurrentTranslationSounds);
+    swapBtn.addEventListener('click', swapDirection);
+    sourceTextarea.addEventListener('input', performTranslation);
+    document.getElementById('meetingBtn').addEventListener('click', summonMosquitoMeeting);
+    
+    // inizializzazione
+    setDialect('tigre');
+    sourceTextarea.value = "ciao, ho sete";
+    performTranslation();
+    updateUIByDirection();
+    
+    // ------------------- ZANZARA VOLANTE SINGOLA ------------------
+    const mosquito = document.getElementById('mosquito');
+    let x = window.innerWidth * 0.7, y = window.innerHeight * 0.3;
+    let vx = 1.3, vy = 0.9;
+    let animFrame;
+    
+    function moveMosquito() {
+      const maxX = window.innerWidth - 50;
+      const maxY = window.innerHeight - 50;
+      x += vx;
+      y += vy;
+      if (x <= 5) { x = 5; vx = -vx; }
+      if (x >= maxX) { x = maxX; vx = -vx; }
+      if (y <= 5) { y = 5; vy = -vy; }
+      if (y >= maxY) { y = maxY; vy = -vy; }
+      mosquito.style.left = x + 'px';
+      mosquito.style.top = y + 'px';
+      const angle = Math.sin(Date.now() * 0.008) * 12;
+      mosquito.style.transform = `rotate(${angle}deg)`;
+      animFrame = requestAnimationFrame(moveMosquito);
+    }
+    
+    window.addEventListener('resize', () => {
+      x = Math.min(x, window.innerWidth - 50);
+      y = Math.min(y, window.innerHeight - 50);
+    });
+    moveMosquito();
+    
+    // avvia canvas
+    resizeCanvas();
+    window.addEventListener('resize', () => resizeCanvas());
+    drawWave();
+  })();
+</script>
+</body>
+</html>
